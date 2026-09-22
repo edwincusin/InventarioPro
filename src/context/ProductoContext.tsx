@@ -9,6 +9,7 @@ export type Producto = {
     categoria: string;
     fotoBase64: string | null;
     createdAt: string;
+
 }
 
 type ProductoContextType = {
@@ -17,6 +18,7 @@ type ProductoContextType = {
     addProducto: (producto: Omit<Producto, 'id' | 'createdAt'>) => Promise<boolean>;
     updateProducto: (id: number, productoModificado: Omit<Producto, 'id' | 'createdAt'>) => Promise<boolean>;
     deleteProducto: (id: number) => void;
+    cargar: boolean;
 }
 
 const ProductoContext = createContext<ProductoContextType | undefined>(undefined);
@@ -24,15 +26,19 @@ const ProductoContext = createContext<ProductoContextType | undefined>(undefined
 export function ProductoProvider({ children }: { children: ReactNode }) {
 
     const [productos, setProductos] = useState<Producto[]>([]);
+    const [cargar, setcargar] = useState(false);
 
     //METODO GET 
     const fetchProductos = async () => {
+        setcargar(true)
         try {
             const response = await api.get('/inventario/productos');
             setProductos(response.data);
 
         } catch (error) {
             Alert.alert("Error", "No se pudo conectar con el servidor");
+        }finally{
+            setcargar(false)
         }
     }
     // se ejecuta una sola vez
@@ -78,11 +84,11 @@ export function ProductoProvider({ children }: { children: ReactNode }) {
         }
     };
 
-    return <ProductoContext.Provider value={{ addProducto, deleteProducto, fetchProductos, productos, updateProducto }}>
+    return <ProductoContext.Provider value={{ cargar,addProducto, deleteProducto, fetchProductos, productos, updateProducto}}>
         {children}
     </ProductoContext.Provider>
 
-} export function useContacts() {
+} export function useProducto() {
     const context = useContext(ProductoContext);
     if (!context) {
         throw new Error("Debe usarse dentro de un producto provider")
