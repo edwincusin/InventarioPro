@@ -8,8 +8,8 @@ export type Producto = {
     precio: number;
     categoria: string;
     fotoBase64: string | null;
+    codigoBarras:string | null;
     createdAt: string;
-
 }
 
 type ProductoContextType = {

@@ -1,10 +1,12 @@
-import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet, ScrollView, Alert, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Picker } from '@react-native-picker/picker';
 import { Ionicons } from '@expo/vector-icons';
 import { useProducto } from '../context/ProductoContext';
 import { useState } from 'react';
 import *as ImagePicker from 'expo-image-picker'
+import { CameraView, useCameraPermissions } from 'expo-camera';
+
 
 export default function NuevoProductoScreen({ navigation }: any) {
 
@@ -13,12 +15,17 @@ export default function NuevoProductoScreen({ navigation }: any) {
   const [precio, setPrecio] = useState('');
   const [categoria, setCategoria] = useState('');
   const [fotoBase64, setFotoBase64] = useState<string | null>(null);
+  //para escanear codigo de barras 
+  const [codigoBarras, setCodigoBarras] = useState<string | null>(null);
+  const [scannerVisible, setScannerVisible] = useState(false);
+  const [permission, requestPermission] = useCameraPermissions();
 
   const limpiarCampos = () => {
     setnombre('');
     setPrecio('');
     setCategoria('');
     setFotoBase64(null);
+    setCodigoBarras(null);
   }
   const limpiarYVolver = () => {
     limpiarCampos();
@@ -53,9 +60,9 @@ export default function NuevoProductoScreen({ navigation }: any) {
       if (resultado.canceled) {
         Alert.alert("Cancelado", "Accion cancelada")
         return
-      } 
+      }
 
-      setFotoBase64(resultado.assets[0].base64??null);
+      setFotoBase64(resultado.assets[0].base64 ?? null);
 
     } catch (error) {
       Alert.alert("Error", "Error al tomar la foto")
@@ -63,22 +70,56 @@ export default function NuevoProductoScreen({ navigation }: any) {
   }
 
   const manejarGuardar = async () => {
-    if(!validarCamposObligatorios()) return;
+    if (!validarCamposObligatorios()) return;
 
-    const exito = await addProducto({ nombre, categoria, fotoBase64, precio:parseFloat(precio) });
+    const exito = await addProducto({ nombre, categoria, fotoBase64, precio: parseFloat(precio), codigoBarras });
 
-    if(exito) {
+    if (exito) {
       Alert.alert("Éxito", "Producto guardado correctamente");
       limpiarYVolver();
-    }else{
+    } else {
       Alert.alert("Error", "No se pudo guardar el producto");
     }
 
   }
 
+  const abrirScanner = async () => {
+    if (!permission?.granted) {
+      const resultado = await requestPermission();
+      if (!resultado.granted) {
+        Alert.alert("Permiso denegado", "Necesitas dar acceso a la cámara para escanear");
+        return;
+      }
+    }
+    setScannerVisible(true);
+  }
+  const manejarCodigoEscaneado = ({ data }: { data: string }) => {
+    setCodigoBarras(data);
+    setScannerVisible(false);
+  }
 
   return (
     <SafeAreaView style={styles.safe}>
+
+      <Modal visible={scannerVisible} animationType="slide">
+        <View style={{ flex: 1, backgroundColor: BG }}>
+          <CameraView
+            style={{ flex: 1 }}
+            facing="back"
+            onBarcodeScanned={manejarCodigoEscaneado}
+            barcodeScannerSettings={{
+              barcodeTypes: ["qr", "ean13", "code128", "code39"],
+            }}
+          />
+          <TouchableOpacity
+            style={styles.cerrarScannerBtn}
+            onPress={() => setScannerVisible(false)}
+          >
+            <Ionicons name="close-circle" size={40} color={ACCENT_2} />
+          </TouchableOpacity>
+        </View>
+      </Modal>
+
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.header}>
           <View>
@@ -131,6 +172,18 @@ export default function NuevoProductoScreen({ navigation }: any) {
                 <Picker.Item label='Otro...' value="Otro..." color="#000000" />
               </Picker>
             </View>
+
+            <View style={styles.field}>
+              <Text style={styles.label}>Codigo Barra</Text>
+              <TextInput
+                style={styles.input}
+                value={codigoBarras ?? ''}
+                onChangeText={setCodigoBarras}
+                placeholder='Utiliza el boton escanear para llenar'
+                placeholderTextColor="#4d4d5e"
+                editable={false}
+              />
+            </View>
           </View>
 
           <View style={styles.imageContainer}>
@@ -152,7 +205,7 @@ export default function NuevoProductoScreen({ navigation }: any) {
               <Ionicons name='camera' size={22} color={ACCENT} />
               <Text style={styles.actionText}>Tomar foto</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.actionButton}>
+            <TouchableOpacity style={styles.actionButton} onPress={abrirScanner}>
               <Ionicons name='scan' size={22} color={ACCENT} />
               <Text style={styles.actionText}>Scanear barras</Text>
             </TouchableOpacity>
@@ -310,5 +363,10 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 0 },
     elevation: 6,
+  },
+  cerrarScannerBtn: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
   },
 });
