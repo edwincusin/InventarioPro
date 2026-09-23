@@ -181,7 +181,8 @@ export default function NuevoProductoScreen({ navigation }: any) {
                 onChangeText={setCodigoBarras}
                 placeholder='Utiliza el boton escanear para llenar'
                 placeholderTextColor="#4d4d5e"
-                editable={false}
+                editable={false} 
+                
               />
             </View>
           </View>
