@@ -37,7 +37,7 @@ export default function App() {
               name="AddProductos"
               component={NuevoProductoScreen}
               options={{
-                title: 'Nuevo Producto',
+                headerShown: false,
                 tabBarIcon: ({ color, size }) => (
                   <Ionicons name="add-circle" size={size} color={color} />
                 ),
